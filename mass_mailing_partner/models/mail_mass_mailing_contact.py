@@ -46,13 +46,16 @@ class MailMassMailingContact(models.Model):
             vals = contact._set_name_email(vals)
         return super(MailMassMailingContact, self).write(vals)
 
-    def _prepare_partner(self, vals, mailing_list):
+    def _prepare_partner(self, vals, mailing_lists):
         vals = {
             'name': vals.get('name') or vals.get('email'),
             'email': vals.get('email', False),
         }
-        if mailing_list.partner_category:
-            vals['category_id'] = [(4, mailing_list.partner_category.id, 0)]
+        partner_categories = []
+        if mailing_lists:
+            partner_categories = mailing_lists.mapped('partner_category')
+        if partner_categories:
+            vals['category_id'] = [(4, partner_categories.ids, 0)]
         return vals
 
     def _set_partner(self, vals):
@@ -61,20 +64,39 @@ class MailMassMailingContact(models.Model):
             return vals
         m_mailing = self.env['mail.mass_mailing.list']
         m_partner = self.env['res.partner']
-        list_ids = vals.get('list_ids', self.list_ids.ids)
-        mailing_list = m_mailing.browse(list_ids)
+
+        list_ids = vals.get('list_ids', False)
+        if list_ids:
+            list_ids = list_ids[0][2]
+        else:
+            list_ids = self.list_ids.ids
+
+        print(str(list_ids))
+        mailing_lists = m_mailing.search([
+            ('id', 'in', list_ids)
+        ])
+        print(str(mailing_lists))
+
         # Look for a partner with that email
         email = email.strip()
         partners = m_partner.search([('email', '=ilike', email)], limit=1)
         if partners:
             # Partner found
             vals['partner_id'] = partners[0].id
-        elif mailing_list.partner_mandatory:
+        elif self._check_mandatory_partner(mailing_lists):
             # Create partner
+            print('ic' + str(mailing_lists))
             partner = m_partner.sudo().create(
-                self._prepare_partner(vals, mailing_list))
+                self._prepare_partner(vals, mailing_lists))
             vals['partner_id'] = partner.id
         return vals
+
+    def _check_mandatory_partner(self, mailing_lists):
+        for partner_mandatory in mailing_lists.mapped('partner_mandatory'):
+            if partner_mandatory:
+                return True
+
+        return False
 
     def _set_name_email(self, vals):
         partner_id = vals.get('partner_id', self.partner_id.id)
