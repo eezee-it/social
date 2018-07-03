@@ -19,7 +19,7 @@ class ResPartner(models.Model):
         comodel_name='mail.mass_mailing.contact', inverse_name='partner_id')
     mass_mailing_contacts_count = fields.Integer(
         string='Mailing list number',
-        compute='_compute_mass_mailing_contacts_count', store=True,
+        compute='_compute_mass_mailing_contacts_count',
         compute_sudo=True)
     mass_mailing_stats = fields.One2many(
         string="Mass mailing stats",
@@ -68,6 +68,25 @@ class ResPartner(models.Model):
              for contact in contact_data])
         for partner in self:
             partner.mass_mailing_stats_count = mapped_data.get(partner.id, 0)
+
+    @api.multi
+    def open_contact_form_view(self):
+        mail_mass_mailing_contact_env = self.env['mail.mass_mailing.contact']
+        action = self.env.ref(
+            'mass_mailing.action_view_mass_mailing_contacts_from_list').read(
+        )[0]
+
+        contact = mail_mass_mailing_contact_env.search([
+            ('partner_id', '=', self.id)
+        ])
+        if contact:
+            action['views'] = [
+                (self.env.ref(
+                    'mass_mailing.'
+                    'view_mail_mass_mailing_contact_form').id, 'form')]
+            action['res_id'] = contact.id
+
+        return action
 
     def write(self, vals):
         res = super(ResPartner, self).write(vals)
