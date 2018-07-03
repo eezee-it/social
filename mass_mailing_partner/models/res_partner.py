@@ -40,14 +40,23 @@ class ResPartner(models.Model):
     @api.depends('mass_mailing_contact_ids',
                  'mass_mailing_contact_ids.opt_out')
     def _compute_mass_mailing_contacts_count(self):
-        contact_data = self.env['mail.mass_mailing.contact'].read_group(
-            [('partner_id', 'in', self.ids)], ['partner_id'], ['partner_id'])
-        mapped_data = dict(
-            [(contact['partner_id'][0], contact['partner_id_count'])
-             for contact in contact_data])
+        # contact_data = self.env['mail.mass_mailing.contact'].read_group(
+        #     [('partner_id', 'in', self.ids)], ['partner_id'], ['partner_id'])
+        # mapped_data = dict(
+        #     [(contact['partner_id'][0], contact['partner_id_count'])
+        #      for contact in contact_data])
+        # for partner in self:
+        #     partner.mass_mailing_contacts_count = mapped_data.get(partner.id,
+        #                                                     0)
+        mail_mass_mailing_contact_env = self.env['mail.mass_mailing.contact']
+
         for partner in self:
-            partner.mass_mailing_contacts_count = mapped_data.get(partner.id,
-                                                                  0)
+            contacts = mail_mass_mailing_contact_env.search([
+                ('partner_id', '=', partner.id)
+            ])
+            partner.mass_mailing_contacts_count = 0
+            if contacts:
+                partner.mass_mailing_contacts_count = len(contacts.list_ids)
 
     @api.multi
     @api.depends('mass_mailing_stats')
