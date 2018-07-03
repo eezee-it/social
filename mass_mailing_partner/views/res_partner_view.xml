@@ -23,8 +23,12 @@
             <button type="object"
                  name="open_contact_form_view"
                  class="oe_stat_button"
-                 icon="fa-envelope-o">
-                 <field name="mass_mailing_contacts_count" widget="statinfo" string="Mailing lists"/>
+                 icon="fa-envelope-o"
+                 context="{'search_default_partner_id': active_id,
+                              'default_partner_id': active_id}"
+                              >
+                 <field name="mass_mailing_contacts_count" widget="statinfo" string="Mailing lists"
+                  />
              </button>
             <!-- <button name="%(mass_mailing_partner.action_view_mass_mailing_contacts_from_form)d"
                     context="{'search_default_partner_id': active_id,
